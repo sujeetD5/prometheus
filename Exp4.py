@@ -10,7 +10,7 @@ app = Flask(__name__)
 _INF = float("inf")
 
 def getauth(host):
-   payload = {'Credentials': {'username': 'admin', 'password': 'a10'}}
+   payload = {'Credentials': {'username': '', 'password': ''}}
    auth = json.loads(
        requests.post("https://{host}/axapi/v3/auth".format(host=host), json=payload, verify=False).content.decode('UTF-8'))
    return 'A10 ' + auth['authresponse']['signature']

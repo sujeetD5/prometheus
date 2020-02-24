@@ -41,7 +41,7 @@ scrape_configs:
 
 
 def getauth(ip):
-    payload = {'Credentials': {'username': 'admin', 'password': 'a10'}}
+    payload = {'Credentials': {'username': '', 'password': ''}}
     auth = json.loads(
         requests.post("https://{host}/axapi/v3/auth".format(host=ip), json=payload, verify=False).content.decode(
             'UTF-8'))
