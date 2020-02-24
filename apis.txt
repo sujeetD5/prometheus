@@ -1,0 +1,7 @@
+/axapi/v3/slb/sip/stats
+/axapi/v3/slb/fix/stats
+/axapi/v3/slb/mlb/stats
+/axapi/v3/slb/smpp/stats
+/axapi/v3/slb/smtp/stats
+/axapi/v3/slb/proxy/stats
+/axapi/v3/slb/ftp-proxy/stats
