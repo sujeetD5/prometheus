@@ -3,14 +3,14 @@ import prometheus_client
 from prometheus_client import Gauge
 import requests, json
 import urllib3
-
+from prometheus_client.registry import CollectorRegistry
 
 app = Flask(__name__)
 
 _INF = float("inf")
 
 def getauth(host):
-   payload = {'Credentials': {'username': '', 'password': ''}}
+   payload = {'Credentials': {'username': 'admin', 'password': 'a10'}}
    auth = json.loads(
        requests.post("https://{host}/axapi/v3/auth".format(host=host), json=payload, verify=False).content.decode('UTF-8'))
    return 'A10 ' + auth['authresponse']['signature']
@@ -27,7 +27,7 @@ def generic_exporter():
    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
    host_ip = request.args["host_ip"]
    api_endpoint = request.args["api_endpoint"]
-   metrics_name = request.args["metrics_name"]
+   api_name = request.args["api_name"]
    token = getauth(host_ip)
 
    endpoint = "http://{host_ip}/axapi/v3".format(host_ip=host_ip)
@@ -44,17 +44,22 @@ def generic_exporter():
    except Exception as e:
        print(e)
        return api_endpoint + " have something missing."
-   # print(vserver)
-   print("name = ", metrics_name)
-   if metrics_name not in endpoint_labels:
-       endpoint_labels[metrics_name] = Gauge(
-           metrics_name,
-           api_endpoint,
-           labelnames=(["data"]),
-       )
-   data = {metrics_name: stats}
-   endpoint_labels[metrics_name].labels(data)
-   res = [prometheus_client.generate_latest(endpoint_labels[metrics_name])]
+
+   print("name = ", api_name)
+
+   if api_name not in endpoint_labels:
+       dictmetrics= dict()
+       for key in stats:
+           dictmetrics[key] = Gauge(key, "api-" + api_name +"key-" + key, labelnames=(["data"]),)
+           data = {api_name: key}
+           dictmetrics[key].labels(data).set(stats[key])
+       endpoint_labels[api_name] = dictmetrics
+
+   #data = {metrics_name: stats}
+   #endpoint_labels[metrics_name].labels(data).set(11)
+   res=[]
+   for name in endpoint_labels[api_name]:
+       res.append(prometheus_client.generate_latest(endpoint_labels[api_name][name]))
    return Response(res, mimetype="text/plain")
 
 
