@@ -6,6 +6,11 @@ import urllib3
 from random import randint
 import Exp4
 
+UNDERSCORE = "_"
+SLASH = "/"
+HYPHEN = "-"
+PLUS = "+"
+
 job = '''
   - job_name: 'name_replace'
     static_configs:
@@ -14,7 +19,7 @@ job = '''
     params:
         host_ip: ["ip_replace"]
         api_endpoint: ["api_endpoint_replace"]
-        metrics_name: ["metrics_name_replace"]
+        api_name: ["api_names_replace"]
 '''
 
 yml = '''
@@ -41,7 +46,7 @@ scrape_configs:
 
 
 def getauth(ip):
-    payload = {'Credentials': {'username': '', 'password': ''}}
+    payload = {'Credentials': {'username': 'admin', 'password': 'a10'}}
     auth = json.loads(
         requests.post("https://{host}/axapi/v3/auth".format(host=ip), json=payload, verify=False).content.decode(
             'UTF-8'))
@@ -63,9 +68,10 @@ def postdatatoapi(ip):
     count = len(list)
     for api in list:
         json = getformat(ip, api)
-        key = api.split("/axapi/v3/slb/")[1].split("/stats")[0]
-        for value in json[key]['stats']:
-            json[key]['stats'][value] = randint(1, 10)
+
+        for key in json:
+            for value in json[key]['stats']:
+                json[key]['stats'][value] = randint(1, 10)
         print(poststats(ip, api, json))
     return list
 
@@ -75,8 +81,16 @@ def createyml(ip, list):
     data = yml
     for item in list:
         name = "prometheus_"
+        api = item.split("/axapi/v3")[1].split("/stats")[0]
         replaced = job.replace("name_replace", name + "job_" + str(ct)).replace("ip_replace", ip).replace(
-            "api_endpoint_replace", item.split("/axapi/v3")[1])
+            "api_endpoint_replace", api)
+        if HYPHEN in api:
+            api = api.replace(HYPHEN, UNDERSCORE)
+        if PLUS in api:
+            api = api.replace(PLUS, UNDERSCORE)
+        if SLASH in api:
+            api = api.replace(SLASH, UNDERSCORE)
+        replaced = replaced.replace("api_names_replace", api)
         ct = ct + 1
         data = data + replaced
     file1 = open('/home/sujeet/Prometheus/prometheus-2.15.1.linux-amd64/prometheus.yml', 'w')
