@@ -1,4 +1,5 @@
 import json
+import sys
 import prometheus_client
 import requests
 import urllib3
@@ -49,7 +50,7 @@ def generic_exporter():
     token = getauth(host_ip)
     if token == '':
         print("Username, password does not match, token can not be empty, exiting")
-        exit(1)
+        sys.exit()
 
     endpoint = "http://{host_ip}/axapi/v3".format(host_ip=host_ip)
     headers = {'content-type': 'application/json', 'Authorization': token}

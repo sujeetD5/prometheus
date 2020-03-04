@@ -46,11 +46,20 @@ scrape_configs:
 
 
 def getauth(ip):
-    payload = {'Credentials': {'username': 'admin', 'password': 'a10'}}
-    auth = json.loads(
+    with open('creds.json') as f:
+        data = json.load(f)
+    if ip not in data:
+        print("Host credentials not found in creds config")
+        return ''
+    else:
+        uname = data[ip]['username']
+        pwd = data[ip]['password']
+
+        payload = {'Credentials': {'username': uname, 'password': pwd}}
+        auth = json.loads(
         requests.post("https://{host}/axapi/v3/auth".format(host=ip), json=payload, verify=False).content.decode(
             'UTF-8'))
-    return 'A10 ' + auth['authresponse']['signature']
+        return 'A10 ' + auth['authresponse']['signature']
 
 
 def execute(ip):
@@ -101,6 +110,9 @@ def createyml(ip, list):
 def poststats(ip, api, json2):
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     token = getauth(ip)
+    if token == '':
+        print("Username, password does not match, token can not be empty, exiting")
+        sys.exit()
     endpoint = "https://" + ip + ":443" + api
     headers = {'content-type': 'application/json', 'Authorization': token}
 
@@ -111,6 +123,9 @@ def poststats(ip, api, json2):
 def getformat(ip, api):
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     token = getauth(ip)
+    if token == '':
+        print("Username, password does not match, token can not be empty, exiting")
+        sys.exit()
     endpoint = "http://" + ip + api
     headers = {'content-type': 'application/json', 'Authorization': token}
     return json.loads(
