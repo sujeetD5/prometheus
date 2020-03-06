@@ -6,6 +6,7 @@ import urllib3
 from random import randint
 import Exp4
 
+
 UNDERSCORE = "_"
 SLASH = "/"
 HYPHEN = "-"
@@ -46,8 +47,9 @@ scrape_configs:
 
 
 def getauth(ip):
-    with open('creds.json') as f:
+    with open('config.json') as f:
         data = json.load(f)
+        data = data["hosts"]
     if ip not in data:
         print("Host credentials not found in creds config")
         return ''
@@ -69,7 +71,18 @@ def execute(ip):
 
 
 def runexporter():
-    Exp4.app.run(debug=True, port=7070)
+    with open('config.json') as f:
+        data = json.load(f)
+        data = data["log"]
+    try:
+        Exp4.logger = Exp4.set_logger(data["log_file"], data["log_level"])
+    except Exception as e:
+        print("Config file is not correct")
+        print(e)
+        sys.exit()
+
+    Exp4.logger.info("Starting exporter")
+    Exp4.main()
 
 
 def postdatatoapi(ip):

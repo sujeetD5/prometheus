@@ -5,6 +5,7 @@ import requests
 import urllib3
 from flask import Response, Flask, request
 from prometheus_client import Gauge
+import logging
 
 UNDERSCORE = "_"
 SLASH = "/"
@@ -19,9 +20,33 @@ app = Flask(__name__)
 _INF = float("inf")
 
 
+def set_logger(log_file, log_level):
+    try:
+        logging.basicConfig(
+            filename=log_file,
+            format='%(asctime)s %(levelname)-8s %(message)s',
+            datefmt='%FT%T%z',
+            level={
+                'DEBUG': logging.DEBUG,
+                'INFO': logging.INFO,
+                'WARN': logging.WARN,
+                'ERROR': logging.ERROR,
+                'CRITICAL': logging.CRITICAL,
+            }[log_level.upper()])
+    except Exception as e:
+        print('Error while setting logger config::%s', e)
+
+    logging.getLogger("requests").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+    logger = logging.getLogger('a10_prometheus_exporter_logger')
+    return logger
+
+
 def getauth(host):
-    with open('creds.json') as f:
+    with open('config.json') as f:
         data = json.load(f)
+        data = data["hosts"]
     if host not in data:
         print("Host credentials not found in creds config")
         return ''
@@ -31,8 +56,8 @@ def getauth(host):
 
         payload = {'Credentials': {'username': uname, 'password': pwd}}
         auth = json.loads(
-        requests.post("https://{host}/axapi/v3/auth".format(host=host), json=payload, verify=False).content.decode(
-            'UTF-8'))
+            requests.post("https://{host}/axapi/v3/auth".format(host=host), json=payload, verify=False).content.decode(
+                'UTF-8'))
         return 'A10 ' + auth['authresponse']['signature']
 
 
@@ -48,6 +73,8 @@ def generic_exporter():
     api_endpoint = request.args["api_endpoint"]
     api_name = request.args["api_name"]
     token = getauth(host_ip)
+    logger.info("Host - " + host_ip + "\n" +
+                "Api - " + api_name + "\t" + "endpoint - " + api_endpoint + "\n")
     if token == '':
         print("Username, password does not match, token can not be empty, exiting")
         sys.exit()
@@ -74,9 +101,10 @@ def generic_exporter():
         if HYPHEN in key:
             key = key.replace(HYPHEN, UNDERSCORE)
         if api_name + UNDERSCORE + key not in dictmetrics:
-            dictmetrics[api_name + UNDERSCORE + key] = Gauge(api_name + UNDERSCORE + key, "api-" + api_name + "key-" + key,
-                                                      labelnames=(["data"]), )
-            #Gauge will be created with unique identifier as combination of ("api_name_key_name")
+            dictmetrics[api_name + UNDERSCORE + key] = Gauge(api_name + UNDERSCORE + key,
+                                                             "api-" + api_name + "key-" + key,
+                                                             labelnames=(["data"]), )
+            # Gauge will be created with unique identifier as combination of ("api_name_key_name")
         data = {api_name: key}
         dictmetrics[api_name + UNDERSCORE + key].labels(data).set(stats[org_key])
         endpoint_labels[api_name] = dictmetrics
@@ -87,5 +115,21 @@ def generic_exporter():
     return Response(res, mimetype="text/plain")
 
 
-if __name__ == '__main__':
+def main():
+
     app.run(debug=True, port=7070)
+
+
+if __name__ == '__main__':
+    with open('config.json') as f:
+        data = json.load(f)
+        data = data["log"]
+    try:
+        logger = set_logger(data["log_file"], data["log_level"])
+    except Exception as e:
+        print("Config file is not correct")
+        print(e)
+        sys.exit()
+
+    logger.info("Starting exporter")
+    main()
