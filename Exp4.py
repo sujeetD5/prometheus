@@ -45,10 +45,9 @@ def set_logger(log_file, log_level):
 
 def getauth(host):
     with open('config.json') as f:
-        data = json.load(f)
-        data = data["hosts"]
+        data = json.load(f)["hosts"]
     if host not in data:
-        print("Host credentials not found in creds config")
+        logger.error("Host credentials not found in creds config")
         return ''
     else:
         uname = data[host]['username']
@@ -76,25 +75,23 @@ def generic_exporter():
     logger.info("Host - " + host_ip + "\n" +
                 "Api - " + api_name + "\t" + "endpoint - " + api_endpoint + "\n")
     if token == '':
-        print("Username, password does not match, token can not be empty, exiting")
+        logger.error("Username, password does not match, token can not be empty, exiting")
         sys.exit()
 
     endpoint = "http://{host_ip}/axapi/v3".format(host_ip=host_ip)
     headers = {'content-type': 'application/json', 'Authorization': token}
-    # print("endpoint = ", endpoint)
-    print(endpoint + api_endpoint + "/stats")
+    logger.info("Uri - "+endpoint + api_endpoint + "/stats")
     response = json.loads(
         requests.get(endpoint + api_endpoint + "/stats", headers=headers, verify=False).content.decode('UTF-8'))
-    # print("response = ", response)
     try:
         key = list(response.keys())[0]
         event = response.get(key)
         stats = event.get("stats", {})
     except Exception as e:
-        print(e)
+        logger.exception(e)
         return api_endpoint + " have something missing."
 
-    print("name = ", api_name)
+    logger.info("name = " + api_name)
 
     for key in stats:
         org_key = key
